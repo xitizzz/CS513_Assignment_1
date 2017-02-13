@@ -1,3 +1,5 @@
+The problem at hand is just prefix sum applied twice so I will just give algorithm for prefix sum.
+
 1. Give each processor chunk of (n / N) elements and find its prefix sum locally. Make the last element as representative element. T = O(n/N)
 Now we have N representative elements.
 2. Find prefix sum of those N elements using parallel prefix sum algorithm. Now we have N prefix sums, one for each processors call it P.  T = O(log N)
