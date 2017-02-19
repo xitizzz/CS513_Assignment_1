@@ -2,8 +2,9 @@
 #include "device_launch_parameters.h"
 #include <iostream>
 #include <cmath>
+#include <time.h> //for clock_gettime, high precision timer
 
-#define POWER 24
+#define POWER 28
 #define THREAD 1024
 
 using namespace std;
@@ -78,29 +79,53 @@ double verify_answers(double *a, double * b, long n) {
 	return maxError/v[n-1];
 }
 
+timespec time_diff(timespec start, timespec end)
+{
+    timespec temp;
+    if ((end.tv_nsec-start.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+    } else {
+        temp.tv_sec = end.tv_sec-start.tv_sec;
+        temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+    }
+    return temp;
+}
+
 int main() {
+    for (int power = 1; power < POWER; power++){
+        double *a, *b;
+        long n = 1 << power;
+        cout << "Current array size: 2^" << power + 1 << "\n";
 
-	double *a, *b;
-	long n = 1 << POWER;
+        //Allocate memory on CPU
+        a = (double *)malloc(n * sizeof(double));
+        b = (double *)malloc(n * sizeof(double));
 
-	//Allocate memory on CPU
-	a = (double *)malloc(n * sizeof(double));
-	b = (double *)malloc(n * sizeof(double));
+        //Initialize values
+        for (long i = 0; i < n; i++) {
+            a[i] = ((double)(rand() % n)) / 100;
+        }
 
-	//Initialize values
-	for (long i = 0; i < n; i++) {
-		a[i] = ((double)(rand() % n)) / 100;
-	}
 
-	//Compute Answers
-	compute_answers(a, b, n);
+        struct timespec start, end, difference;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        //Compute Answers
+        compute_answers(a, b, n);
+        clock_gettime(CLOCK_MONOTONIC, &end);
 
-	//Verify Answers
-	cout<<"Error margin: " <<verify_answers(a, b, n)<<endl;
+        difference = time_diff(start,end);
 
-	//Free memory on CPU
-	free(a);
-	free(b);
 
+        cout << "Elapsed time: " << difference.tv_sec << " seconds " << difference.tv_nsec << " nanoseconds\n";
+
+        //Verify Answers
+        cout<<"Error margin: " <<verify_answers(a, b, n)<<endl;
+        cout << "\n";
+
+        //Free memory on CPU
+        free(a);
+        free(b);
+    }
 	return 0;
 }
