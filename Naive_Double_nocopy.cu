@@ -9,6 +9,7 @@
 #define THREAD 1024
 
 using namespace std;
+struct timespec start[2*POWER], end[2*POWER], difference[2*POWER]; //array of timespecs, one per iteration per pass
 
 __global__
 void add_kernel(double * d_a, double * d_tmp, long k, long n) {
@@ -35,7 +36,10 @@ void compute_answers(double * a, double * b, long n) {
 	//First pass
 	//Launch kernel log n times 
 	for (long p = 0; p <= POWER; p++) {
+        clock_gettime(CLOCK_MONOTONIC, &start[p]);
 		add_kernel << <(n + THREAD - 1) / THREAD, THREAD >> > (d_a, d_tmp, 1 << p, n);
+        cudaDeviceSynchronize();
+        clock_gettime(CLOCK_MONOTONIC, &end[p]);
 		cudaMemcpy(d_a, d_tmp, n * sizeof(double), cudaMemcpyDeviceToDevice);
 	}
 
@@ -44,7 +48,10 @@ void compute_answers(double * a, double * b, long n) {
 	//Second pass
 	//Launch kernel log n times 
 	for (long p = 0; p <= POWER; p++) {
+        clock_gettime(CLOCK_MONOTONIC, &start[p+POWER]);
 		add_kernel << <(n + THREAD - 1) / THREAD, THREAD >> > (d_a, d_tmp, 1 << p, n);
+        cudaDeviceSynchronize();
+        clock_gettime(CLOCK_MONOTONIC, &end[p+POWER]);
 		cudaMemcpy(d_a, d_tmp, n * sizeof(double), cudaMemcpyDeviceToDevice);
 	}
 
@@ -108,17 +115,31 @@ int main() {
             a[i] = ((double)(rand() % n)) / 100;
         }
 
+        //Initialize timers
+        for (int i = 0; i < 2*POWER; i++){
+            start[i].tv_sec = 0;
+            start[i].tv_nsec = 0;
+            end[i].tv_sec = 0;
+            end[i].tv_nsec = 0;
+            difference[i].tv_sec = 0;
+            difference[i].tv_nsec = 0;
+        }
 
-        struct timespec start, end, difference;
-        clock_gettime(CLOCK_MONOTONIC, &start);
+
         //Compute Answers
         compute_answers(a, b, n);
-        clock_gettime(CLOCK_MONOTONIC, &end);
 
-        difference = time_diff(start,end);
+        cudaDeviceSynchronize();
+        time_t diff_sec = 0;
+        long diff_nsec = 0;
 
+        for (int i = 0; i < 2*POWER; i++){
+            difference[i] = time_diff(start[i],end[i]);
+            diff_sec += difference[i].tv_sec;
+            diff_nsec += difference[i].tv_nsec;
+        }
 
-        printf("%d %d %ld %e\n",power+1, difference.tv_sec, difference.tv_nsec, verify_answers(a,b,n));
+        printf("%d %d %ld %e\n",power+1, diff_sec, diff_nsec, verify_answers(a,b,n));
 
         //Free memory on CPU
         free(a);

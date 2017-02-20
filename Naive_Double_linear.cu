@@ -109,16 +109,18 @@ int main() {
         }
 
 
-        struct timespec start, end, difference;
-        clock_gettime(CLOCK_MONOTONIC, &start);
         //Compute Answers
         compute_answers(a, b, n);
+
+        double error_amt = 0;
+        struct timespec start, end, difference;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        error_amt = verify_answers(a,b,n);
         clock_gettime(CLOCK_MONOTONIC, &end);
 
         difference = time_diff(start,end);
 
-
-        printf("%d %d %ld %e\n",power+1, difference.tv_sec, difference.tv_nsec, verify_answers(a,b,n));
+        printf("%d %d %ld %e\n",power+1, difference.tv_sec, difference.tv_nsec, error_amt);
 
         //Free memory on CPU
         free(a);
