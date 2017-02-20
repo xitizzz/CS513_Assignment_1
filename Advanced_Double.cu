@@ -7,8 +7,10 @@ WILLL NOT WORK ON NON POWER OF TWO, STILL WORKING
 #include <iostream>
 #include <cmath>
 #include <ctime>
+#include <time.h> //for clock_gettime
+#include <stdio.h> //for printf
 
-#define POWER 24
+#define POWER 28
 
 using namespace std;
 
@@ -108,35 +110,53 @@ double verify_answers(double *a, double * b, long n) {
 	return maxError / v[n - 1];
 }
 
+timespec time_diff(timespec start, timespec end)
+{
+    timespec temp;
+    if ((end.tv_nsec-start.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+    } else {
+        temp.tv_sec = end.tv_sec-start.tv_sec;
+        temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+    }
+    return temp;
+}
+
 int main() {
-	double *a, *b;
-	long n = 1 << POWER;
+    printf("power seconds nanoseconds error\n");
+    for (int power = 1; power < POWER; power++){
 
-	
-	//Allocate memory on CPU
-	a = (double *)malloc(n * sizeof(double));
-	b = (double *)malloc(n * sizeof(double));
+        double *a, *b;
+        long n = 1 << power;
 
-	srand(clock());
+        
+        //Allocate memory on CPU
+        a = (double *)malloc(n * sizeof(double));
+        b = (double *)malloc(n * sizeof(double));
 
-	//Initialize values
-	for (long i = 0; i < n; i++) {
-		a[i] = ((double)(rand() % n)) / 100;
-	}
+        srand(clock());
 
-	clock_t begin = clock();
-	//Compute Answers
-	compute_answers(a, b, n);
-	clock_t end = clock();
+        //Initialize values
+        for (long i = 0; i < n; i++) {
+            a[i] = ((double)(rand() % n)) / 100;
+        }
 
-	cout << "Time:" << ((double)(end - begin) / CLOCKS_PER_SEC) * 1000<<endl;
+        struct timespec start, end, difference;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        //Compute Answers
+        compute_answers(a, b, n);
+        clock_gettime(CLOCK_MONOTONIC, &end);
 
-	//Verify Answers
-	cout << "Error margin: " << verify_answers(a, b, n) << endl;
+        difference = time_diff(start,end);
+        printf("%d %d %ld %e\n",power+1, difference.tv_sec, difference.tv_nsec, verify_answers(a,b,n));
 
-	//Free memory on CPU
-	free(a);
-	free(b);
+        //Verify Answers
+
+        //Free memory on CPU
+        free(a);
+        free(b);
+    }
 
 	return 0;
 }
