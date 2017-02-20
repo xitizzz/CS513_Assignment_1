@@ -20,7 +20,7 @@ void add_kernel(double * d_a, double * d_tmp, long k, long n) {
 }
 
 __host__
-void compute_answers(double * a, double * b, long n) {
+void compute_answers(double * a, double * b, long n, int power) {
 	double  *d_a, *d_tmp;
 
 	//Allocate memory on GPU
@@ -35,7 +35,7 @@ void compute_answers(double * a, double * b, long n) {
 
 	//First pass
 	//Launch kernel log n times 
-	for (long p = 0; p <= POWER; p++) {
+	for (long p = 0; p <= power; p++) {
         clock_gettime(CLOCK_MONOTONIC, &start[p]);
 		add_kernel << <(n + THREAD - 1) / THREAD, THREAD >> > (d_a, d_tmp, 1 << p, n);
         cudaDeviceSynchronize();
@@ -47,7 +47,7 @@ void compute_answers(double * a, double * b, long n) {
 
 	//Second pass
 	//Launch kernel log n times 
-	for (long p = 0; p <= POWER; p++) {
+	for (long p = 0; p <= power; p++) {
         clock_gettime(CLOCK_MONOTONIC, &start[p+POWER]);
 		add_kernel << <(n + THREAD - 1) / THREAD, THREAD >> > (d_a, d_tmp, 1 << p, n);
         cudaDeviceSynchronize();
@@ -127,7 +127,7 @@ int main() {
 
 
         //Compute Answers
-        compute_answers(a, b, n);
+        compute_answers(a, b, n, power);
 
         cudaDeviceSynchronize();
         time_t diff_sec = 0;

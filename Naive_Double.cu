@@ -19,7 +19,7 @@ void add_kernel(double * d_a, double * d_tmp, long k, long n) {
 }
 
 __host__
-void compute_answers(double * a, double * b, long n) {
+void compute_answers(double * a, double * b, long n, int power) {
 	double  *d_a, *d_tmp;
 
 	//Allocate memory on GPU
@@ -34,7 +34,7 @@ void compute_answers(double * a, double * b, long n) {
 
 	//First pass
 	//Launch kernel log n times 
-	for (long p = 0; p <= POWER; p++) {
+	for (long p = 0; p <= power; p++) {
 		add_kernel << <(n + THREAD - 1) / THREAD, THREAD >> > (d_a, d_tmp, 1 << p, n);
 		cudaMemcpy(d_a, d_tmp, n * sizeof(double), cudaMemcpyDeviceToDevice);
 	}
@@ -43,7 +43,7 @@ void compute_answers(double * a, double * b, long n) {
 
 	//Second pass
 	//Launch kernel log n times 
-	for (long p = 0; p <= POWER; p++) {
+	for (long p = 0; p <= power; p++) {
 		add_kernel << <(n + THREAD - 1) / THREAD, THREAD >> > (d_a, d_tmp, 1 << p, n);
 		cudaMemcpy(d_a, d_tmp, n * sizeof(double), cudaMemcpyDeviceToDevice);
 	}
@@ -112,7 +112,7 @@ int main() {
         struct timespec start, end, difference;
         clock_gettime(CLOCK_MONOTONIC, &start);
         //Compute Answers
-        compute_answers(a, b, n);
+        compute_answers(a, b, n, power);
         clock_gettime(CLOCK_MONOTONIC, &end);
 
         difference = time_diff(start,end);
